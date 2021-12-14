@@ -49,6 +49,12 @@ frame-system-benchmarking = { git = "https://github.com/paritytech/substrate", d
 frame-system-rpc-runtime-api = { git = "https://github.com/paritytech/substrate", default-features = false , branch = "polkadot-v0.9.13" }
 
 ## Substrate Pallet Dependencies
+pallet-ethereum = { default-features = false, path = "../pallets/ethereum" }
+pallet-evm = { default-features = false, path = "../pallets/evm" }
+pallet-dynamic-fee = { default-features = false, path = "../pallets/dynamic-fee" }
+pallet-evm-precompile-simple = { default-features = false, path = "../pallets/evm/precompile/simple" }
+pallet-evm-precompile-sha3fips = { default-features = false, path = "../pallets/evm/precompile/sha3fips" }
+pallet-evm-precompile-modexp = { default-features = false, path = "../pallets/evm/precompile/modexp" }
 pallet-aura = { git = "https://github.com/paritytech/substrate", default-features = false , branch = "polkadot-v0.9.13" }
 pallet-authorship = { git = "https://github.com/paritytech/substrate", default-features = false , branch = "polkadot-v0.9.13" }
 pallet-balances = { git = "https://github.com/paritytech/substrate", default-features = false , branch = "polkadot-v0.9.13" }
@@ -57,6 +63,7 @@ pallet-sudo = { git = "https://github.com/paritytech/substrate", default-feature
 pallet-timestamp = { git = "https://github.com/paritytech/substrate", default-features = false , branch = "polkadot-v0.9.13" }
 pallet-transaction-payment = { git = "https://github.com/paritytech/substrate", default-features = false , branch = "polkadot-v0.9.13" }
 pallet-transaction-payment-rpc-runtime-api = { git = "https://github.com/paritytech/substrate", default-features = false , branch = "polkadot-v0.9.13" }
+pallet-base-fee = { default-features = false, path = "../pallets/base-fee" }
 
 # Cumulus dependencies
 cumulus-pallet-aura-ext = { git = 'https://github.com/paritytech/cumulus', branch = 'polkadot-v0.9.13', default-features = false }
@@ -103,6 +110,11 @@ std = [
 	"frame-executive/std",
 	"frame-support/std",
 	"frame-system/std",
+	"pallet-ethereum/std",
+	"pallet-evm/std",
+	"pallet-dynamic-fee/std",
+	"pallet-evm-precompile-simple/std",
+	"pallet-evm-precompile-sha3fips/std",
 	"pallet-aura/std",
 	"pallet-authorship/std",
 	"pallet-balances/std",
@@ -113,6 +125,7 @@ std = [
 	"pallet-timestamp/std",
 	"pallet-transaction-payment-rpc-runtime-api/std",
 	"pallet-transaction-payment/std",
+	"pallet-base-fee/std",
 	"cumulus-pallet-aura-ext/std",
 	"cumulus-pallet-parachain-system/std",
 	"cumulus-pallet-xcm/std",
