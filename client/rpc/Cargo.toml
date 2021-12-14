@@ -14,27 +14,27 @@ jsonrpc-pubsub = "18.0"
 log = "0.4.8"
 ethereum-types = "0.12"
 evm = "0.33.0"
-fc-consensus = { version = "2.0.0-dev", path = "../consensus" }
+# fc-consensus = { version = "2.0.0-dev", path = "../consensus" }
 fc-db = { version = "2.0.0-dev", path = "../db" }
 fc-rpc-core = { version = "1.1.0-dev", path = "../rpc-core" }
-fp-consensus = { version = "2.0.0-dev", path = "../../primitives/consensus" }
+# fp-consensus = { version = "2.0.0-dev", path = "../../primitives/consensus" }
 fp-rpc = { version = "3.0.0-dev", path = "../../primitives/rpc" }
 fp-storage = { version = "2.0.0-dev", path = "../../primitives/storage"}
-sp-io = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate" }
-sp-runtime = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate" }
-sp-api = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate" }
-sp-transaction-pool = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate" }
-sc-transaction-pool = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate" }
-sp-storage = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate" }
-sp-blockchain = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate" }
-sc-transaction-pool-api = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate" }
+sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.13" }
+sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.13" }
+sp-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.13" }
+sp-transaction-pool = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.13" }
+sc-transaction-pool = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.13" }
+sp-storage = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.13" }
+sp-blockchain = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.13" }
+sc-transaction-pool-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.13" }
 sc-service = { version = "0.10.0-dev", git = "https://github.com/paritytech/substrate" }
-sc-client-api = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate" }
-sc-rpc = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate" }
-sc-network = { version = "0.10.0-dev", git = "https://github.com/paritytech/substrate" }
-pallet-evm = { version = "6.0.0-dev", path = "../../frame/evm" }
+sc-client-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.13" }
+sc-rpc = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.13" }
+sc-network = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.13" }
+pallet-evm = { version = "6.0.0-dev", path = "../../pallets/evm" }
 fp-evm = { version = "3.0.0-dev", path = "../../primitives/evm" }
-pallet-ethereum = { version = "4.0.0-dev", path = "../../frame/ethereum" }
+pallet-ethereum = { version = "4.0.0-dev", path = "../../pallets/ethereum" }
 ethereum = { version = "0.10.0", features = ["with-codec"] }
 codec = { package = "parity-scale-codec", version = "2.0.0" }
 rlp = "0.5"
