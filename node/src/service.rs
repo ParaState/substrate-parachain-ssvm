@@ -1,7 +1,11 @@
 //! Service and ServiceFactory implementation. Specialized wrapper over substrate service.
 
 // std
-use std::sync::Arc;
+use std::{
+	collections::BTreeMap,
+	sync::{Arc, Mutex},
+	time::Duration,
+};
 
 // Local Runtime Types
 use parachain_template_runtime::{
@@ -19,11 +23,14 @@ use cumulus_client_service::{
 };
 use cumulus_primitives_core::ParaId;
 
+use fc_rpc_core::types::FilterPool;
+
 // Substrate Imports
+use sc_cli::SubstrateCli;
 use sc_client_api::ExecutorProvider;
 use sc_executor::NativeElseWasmExecutor;
 use sc_network::NetworkService;
-use sc_service::{Configuration, PartialComponents, Role, TFullBackend, TFullClient, TaskManager};
+use sc_service::{Configuration, PartialComponents, Role, TFullBackend, TFullClient, TaskManager, BasePath};
 use sc_telemetry::{Telemetry, TelemetryHandle, TelemetryWorker, TelemetryWorkerHandle};
 use sp_api::ConstructRuntimeApi;
 use sp_consensus::SlotData;
@@ -44,6 +51,29 @@ impl sc_executor::NativeExecutionDispatch for TemplateRuntimeExecutor {
 	fn native_version() -> sc_executor::NativeVersion {
 		parachain_template_runtime::native_version()
 	}
+}
+
+pub fn frontier_database_dir(config: &Configuration) -> std::path::PathBuf {
+	let config_dir = config
+		.base_path
+		.as_ref()
+		.map(|base_path| base_path.config_dir(config.chain_spec.id()))
+		.unwrap_or_else(|| {
+			BasePath::from_project("", "", &crate::cli::Cli::executable_name())
+				.config_dir(config.chain_spec.id())
+		});
+	config_dir.join("frontier").join("db")
+}
+
+pub fn open_frontier_backend(config: &Configuration) -> Result<Arc<fc_db::Backend<Block>>, String> {
+	Ok(Arc::new(fc_db::Backend::<Block>::new(
+		&fc_db::DatabaseSettings {
+			source: fc_db::DatabaseSettingsSrc::RocksDb {
+				path: frontier_database_dir(&config),
+				cache_size: 0,
+			},
+		},
+	)?))
 }
 
 /// Starts a `ServiceBuilder` for a full service.
@@ -189,6 +219,7 @@ where
 		> + sp_offchain::OffchainWorkerApi<Block>
 		+ sp_block_builder::BlockBuilder<Block>
 		+ cumulus_primitives_core::CollectCollationInfo<Block>
+		+ fp_rpc::EthereumRuntimeRPCApi<Block>
 		+ pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>
 		+ substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Nonce>,
 	sc_client_api::StateBackendFor<TFullBackend<Block>, Block>: sp_api::StateBackend<BlakeTwo256>,
@@ -269,18 +300,38 @@ where
 			warp_sync: None,
 		})?;
 
+	let filter_pool: Option<FilterPool> = Some(Arc::new(Mutex::new(BTreeMap::new())));
+	let frontier_backend = open_frontier_backend(&parachain_config)?;
+	let is_authority = parachain_config.role.is_authority();
+	// FixMe: get value from command line
+	let enable_dev_signer = false;
+	let subscription_task_executor =
+		sc_rpc::SubscriptionTaskExecutor::new(task_manager.spawn_handle());
+
 	let rpc_extensions_builder = {
 		let client = client.clone();
-		let transaction_pool = transaction_pool.clone();
+		let pool = transaction_pool.clone();
+		let network = network.clone();
+		let filter_pool = filter_pool.clone();
+		let frontier_backend = frontier_backend.clone();
+		// FixMe: get value from command line
+		let max_past_logs: u32 = 0;
 
 		Box::new(move |deny_unsafe, _| {
 			let deps = crate::rpc::FullDeps {
 				client: client.clone(),
-				pool: transaction_pool.clone(),
+				pool: pool.clone(),
+				graph: pool.pool().clone(),
 				deny_unsafe,
+				is_authority,
+				enable_dev_signer,
+				network: network.clone(),
+				filter_pool: filter_pool.clone(),
+				backend: frontier_backend.clone(),
+				max_past_logs,
 			};
 
-			Ok(crate::rpc::create_full(deps))
+			Ok(crate::rpc::create_full(deps, subscription_task_executor.clone()))
 		})
 	};
 

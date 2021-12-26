@@ -31,7 +31,9 @@ serde = { version = "1.0.119", features = ["derive"] }
 hex-literal = "0.3.1"
 
 # RPC related Dependencies
+jsonrpc-pubsub = "18.0.0"
 jsonrpc-core = "18.0.0"
+futures = "0.3"
 
 # Local Dependencies
 parachain-template-runtime = { path = "../runtime" }
@@ -76,6 +78,14 @@ sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkad
 sp-session = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.13" }
 sp-timestamp = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.13" }
 sp-transaction-pool = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.13" }
+
+fc-consensus = { path = "../client/consensus" }
+fp-consensus = { path = "../primitives/consensus" }
+fc-rpc = { path = "../client/rpc" }
+fp-rpc = { path = "../primitives/rpc" }
+fc-rpc-core = { path = "../client/rpc-core" }
+fc-db = { path = "../client/db" }
+fc-mapping-sync = { path = "../client/mapping-sync" }
 
 pallet-evm = { path = "../pallets/evm" }
 pallet-ethereum = { path = "../pallets/ethereum" }
