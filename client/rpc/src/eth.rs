@@ -671,6 +671,16 @@ where
 	}
 
 	fn block_by_number(&self, number: BlockNumber, full: bool) -> Result<Option<RichBlock>> {
+		let best_number = self.client.info().best_number;
+		let target_number = match number {
+			BlockNumber::Num(num) => Some(num),
+			_ => None,
+		};
+		if target_number.is_some() {
+			if target_number.unwrap() > best_number.unique_saturated_into() {
+                return Ok(None);
+			}
+		}
 		let id = match frontier_backend_client::native_block_id::<B, C>(
 			self.client.as_ref(),
 			self.backend.as_ref(),
