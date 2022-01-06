@@ -26,8 +26,11 @@ use cumulus_primitives_core::ParaId;
 use fc_rpc_core::types::FilterPool;
 
 // Substrate Imports
+use fc_mapping_sync::{MappingSyncWorker, SyncStrategy};
+use fc_rpc::EthTask;
 use sc_cli::SubstrateCli;
-use sc_client_api::ExecutorProvider;
+use futures::StreamExt;
+use sc_client_api::{BlockchainEvents, ExecutorProvider};
 use sc_executor::NativeElseWasmExecutor;
 use sc_network::NetworkService;
 use sc_service::{Configuration, PartialComponents, Role, TFullBackend, TFullClient, TaskManager, BasePath};
@@ -347,6 +350,37 @@ where
 		system_rpc_tx,
 		telemetry: telemetry.as_mut(),
 	})?;
+
+	task_manager.spawn_essential_handle().spawn(
+		"frontier-mapping-sync-worker",
+		None,
+		MappingSyncWorker::new(
+			client.import_notification_stream(),
+			Duration::new(6, 0),
+			client.clone(),
+			backend.clone(),
+			frontier_backend.clone(),
+			SyncStrategy::Normal,
+		)
+		.for_each(|()| futures::future::ready(())),
+	);
+
+	// Spawn Frontier EthFilterApi maintenance task.
+	if let Some(filter_pool) = filter_pool {
+		// Each filter is allowed to stay in the pool for 100 blocks.
+		const FILTER_RETAIN_THRESHOLD: u64 = 100;
+		task_manager.spawn_essential_handle().spawn(
+			"frontier-filter-pool",
+			None,
+			EthTask::filter_pool_task(Arc::clone(&client), filter_pool, FILTER_RETAIN_THRESHOLD),
+		);
+	}
+
+	task_manager.spawn_essential_handle().spawn(
+		"frontier-schema-cache-task",
+		None,
+		EthTask::ethereum_schema_cache_task(Arc::clone(&client), Arc::clone(&frontier_backend)),
+	);
 
 	let announce_block = {
 		let network = network.clone();
