@@ -1,16 +1,10 @@
-// Copyright 2020 Parity Technologies (UK) Ltd.
-
+use crate::chain_spec;
 use std::path::PathBuf;
-
-use sc_cli;
 use structopt::StructOpt;
 
 /// Sub-commands supported by the collator.
 #[derive(Debug, StructOpt)]
 pub enum Subcommand {
-	#[structopt(flatten)]
-	Base(sc_cli::Subcommand),
-
 	/// Export the genesis state of the parachain.
 	#[structopt(name = "export-genesis-state")]
 	ExportGenesisState(ExportGenesisStateCommand),
@@ -18,6 +12,31 @@ pub enum Subcommand {
 	/// Export the genesis wasm of the parachain.
 	#[structopt(name = "export-genesis-wasm")]
 	ExportGenesisWasm(ExportGenesisWasmCommand),
+
+	/// Build a chain specification.
+	BuildSpec(sc_cli::BuildSpecCmd),
+
+	/// Validate blocks.
+	CheckBlock(sc_cli::CheckBlockCmd),
+
+	/// Export blocks.
+	ExportBlocks(sc_cli::ExportBlocksCmd),
+
+	/// Export the state of a given block into a chain spec.
+	ExportState(sc_cli::ExportStateCmd),
+
+	/// Import blocks.
+	ImportBlocks(sc_cli::ImportBlocksCmd),
+
+	/// Remove the whole chain.
+	PurgeChain(cumulus_client_cli::PurgeChainCmd),
+
+	/// Revert the chain to a previous state.
+	Revert(sc_cli::RevertCmd),
+
+	/// The custom benchmark subcommmand benchmarking runtime pallets.
+	#[structopt(name = "benchmark", about = "Benchmark runtime pallets.")]
+	Benchmark(frame_benchmarking_cli::BenchmarkCmd),
 }
 
 /// Command for exporting the genesis state of the parachain
@@ -27,9 +46,9 @@ pub struct ExportGenesisStateCommand {
 	#[structopt(parse(from_os_str))]
 	pub output: Option<PathBuf>,
 
-	/// Id of the parachain this state is for.
-	#[structopt(long, default_value = "200")]
-	pub parachain_id: u32,
+	/// Write output in binary. Default is to write in hex.
+	#[structopt(short, long)]
+	pub raw: bool,
 
 	/// The name of the chain for that the genesis state should be exported.
 	#[structopt(long)]
@@ -43,27 +62,13 @@ pub struct ExportGenesisWasmCommand {
 	#[structopt(parse(from_os_str))]
 	pub output: Option<PathBuf>,
 
+	/// Write output in binary. Default is to write in hex.
+	#[structopt(short, long)]
+	pub raw: bool,
+
 	/// The name of the chain for that the genesis wasm file should be exported.
 	#[structopt(long)]
 	pub chain: Option<String>,
-}
-
-#[derive(Debug, StructOpt)]
-pub struct RunCmd {
-	#[structopt(flatten)]
-	pub base: sc_cli::RunCmd,
-
-	/// Id of the parachain this collator collates for.
-	#[structopt(long)]
-	pub parachain_id: Option<u32>,
-}
-
-impl std::ops::Deref for RunCmd {
-	type Target = sc_cli::RunCmd;
-
-	fn deref(&self) -> &Self::Target {
-		&self.base
-	}
 }
 
 #[derive(Debug, StructOpt)]
@@ -77,11 +82,11 @@ pub struct Cli {
 	pub subcommand: Option<Subcommand>,
 
 	#[structopt(flatten)]
-	pub run: RunCmd,
+	pub run: cumulus_client_cli::RunCmd,
 
-	/// Relaychain arguments
+	/// Relay chain arguments
 	#[structopt(raw = true)]
-	pub relaychain_args: Vec<String>,
+	pub relay_chain_args: Vec<String>,
 }
 
 #[derive(Debug)]
@@ -97,16 +102,14 @@ pub struct RelayChainCli {
 }
 
 impl RelayChainCli {
-	/// Create a new instance of `Self`.
+	/// Parse the relay chain CLI parameters using the para chain `Configuration`.
 	pub fn new<'a>(
-		base_path: Option<PathBuf>,
-		chain_id: Option<String>,
+		para_config: &sc_service::Configuration,
 		relay_chain_args: impl Iterator<Item = &'a String>,
 	) -> Self {
-		Self {
-			base_path,
-			chain_id,
-			base: polkadot_cli::RunCmd::from_iter(relay_chain_args),
-		}
+		let extension = chain_spec::Extensions::try_get(&*para_config.chain_spec);
+		let chain_id = extension.map(|e| e.relay_chain.clone());
+		let base_path = para_config.base_path.as_ref().map(|x| x.path().join("polkadot"));
+		Self { base_path, chain_id, base: polkadot_cli::RunCmd::from_iter(relay_chain_args) }
 	}
 }

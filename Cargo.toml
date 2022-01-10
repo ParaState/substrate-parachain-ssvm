@@ -1,11 +1,28 @@
-[workspace]
-members = [
-	"runtime/",
-	"pallets/parachain-info",
-	"pallets/token-dealer",
-	"pallets/template",
-	"node/",
-]
-
 [profile.release]
 panic = 'unwind'
+
+[workspace]
+members = [
+	'pallets/dynamic-fee',
+	'pallets/ethereum',
+	'pallets/evm',
+	'pallets/evm/precompile/sha3fips',
+	'pallets/evm/precompile/simple',
+	'pallets/evm/precompile/modexp',
+	'pallets/evm/precompile/ed25519',
+	'pallets/evm/precompile/bn128',
+	'pallets/evm/precompile/blake2',
+	'pallets/evm/precompile/dispatch',
+	'pallets/evm/precompile/curve25519',
+	'client/consensus',
+	'client/rpc-core',
+	'client/rpc',
+	'client/db',
+	'client/mapping-sync',
+	'primitives/consensus',
+	'primitives/evm',
+	'primitives/rpc',
+	'primitives/self-contained',
+	'node',
+	'runtime',
+]
