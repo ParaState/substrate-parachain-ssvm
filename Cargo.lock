@@ -5052,21 +5052,27 @@ dependencies = [
 [[package]]
 name = "pallet-collator-selection"
 version = "3.0.0"
-source = "git+https://github.com/paritytech/cumulus?branch=polkadot-v0.9.13#0be8e8fc214641e306e4f913dd64ff1913e46e95"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
  "log",
+ "pallet-aura",
  "pallet-authorship",
+ "pallet-balances",
  "pallet-session",
+ "pallet-timestamp",
  "parity-scale-codec",
  "rand 0.7.3",
  "scale-info",
  "serde",
+ "sp-consensus-aura",
+ "sp-core 4.0.0-dev",
+ "sp-io 4.0.0-dev",
  "sp-runtime 4.0.0-dev",
  "sp-staking 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.13)",
  "sp-std 4.0.0-dev",
+ "sp-tracing 4.0.0-dev",
 ]
 
 [[package]]

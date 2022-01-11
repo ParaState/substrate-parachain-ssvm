@@ -3,6 +3,7 @@ panic = 'unwind'
 
 [workspace]
 members = [
+	'pallets/collator-selection',
 	'pallets/dynamic-fee',
 	'pallets/ethereum',
 	'pallets/evm',
