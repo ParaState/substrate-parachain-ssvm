@@ -77,7 +77,7 @@ cumulus-pallet-xcmp-queue = { git = 'https://github.com/paritytech/cumulus', bra
 cumulus-primitives-core = { git = 'https://github.com/paritytech/cumulus', branch = 'polkadot-v0.9.13', default-features = false }
 cumulus-primitives-timestamp = { git = 'https://github.com/paritytech/cumulus', branch = 'polkadot-v0.9.13', default-features = false }
 cumulus-primitives-utility = { git = 'https://github.com/paritytech/cumulus', branch = 'polkadot-v0.9.13', default-features = false }
-pallet-collator-selection = { git = 'https://github.com/paritytech/cumulus', branch = 'polkadot-v0.9.13', default-features = false }
+pallet-collator-selection = { path = "../pallets/collator-selection", default-features = false }
 parachain-info = { git = 'https://github.com/paritytech/cumulus', branch = 'polkadot-v0.9.13', default-features = false }
 cumulus-pallet-session-benchmarking = { git = 'https://github.com/paritytech/cumulus', branch = 'polkadot-v0.9.13', default-features = false, version = "3.0.0"}
 
