@@ -35,6 +35,10 @@ hex-literal = "0.3.1"
 jsonrpc-core = "18.0.0"
 
 # Local Dependencies
+pallet-base-fee = { path = "../pallets/base-fee" }
+pallet-dynamic-fee = { path = "../pallets/dynamic-fee" }
+pallet-ethereum = { path = "../pallets/ethereum" }
+pallet-evm = { path = "../pallets/evm" }
 parachain-template-runtime = { path = "../runtime" }
 
 # Substrate Dependencies

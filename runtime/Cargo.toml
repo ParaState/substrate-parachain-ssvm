@@ -24,6 +24,13 @@ smallvec = "1.6.1"
 
 # Local Dependencies
 pallet-template = { path = "../pallets/template", default-features = false }
+pallet-base-fee = { default-features = false, path = "../pallets/base-fee" }
+pallet-dynamic-fee = { default-features = false, path = "../pallets/dynamic-fee" }
+pallet-ethereum = { default-features = false, path = "../pallets/ethereum" }
+pallet-evm = { default-features = false, path = "../pallets/evm" }
+pallet-evm-precompile-simple = { default-features = false, path = "../pallets/evm/precompile/simple" }
+pallet-evm-precompile-sha3fips = { default-features = false, path = "../pallets/evm/precompile/sha3fips" }
+pallet-evm-precompile-modexp = { default-features = false, path = "../pallets/evm/precompile/modexp" }
 
 # Substrate Dependencies
 ## Substrate Primitive Dependencies
@@ -116,6 +123,12 @@ std = [
 	"pallet-transaction-payment-rpc-runtime-api/std",
 	"pallet-transaction-payment/std",
 	"pallet-xcm/std",
+	"pallet-ethereum/std",
+	"pallet-evm/std",
+	"pallet-dynamic-fee/std",
+	"pallet-evm-precompile-simple/std",
+	"pallet-evm-precompile-sha3fips/std",
+	"pallet-base-fee/std",
 	"cumulus-pallet-aura-ext/std",
 	"cumulus-pallet-parachain-system/std",
 	"cumulus-pallet-xcm/std",
