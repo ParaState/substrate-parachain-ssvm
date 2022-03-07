@@ -415,6 +415,8 @@ impl<F: FindAuthor<u32>> FindAuthor<H160> for FindAuthorTruncated<F> {
 
 parameter_types! {
 	pub const ChainId: u64 = 42;
+	pub const TxFeeDaoPercentage: Permill = Permill::from_percent(45);
+	pub const TxFeeDevPercentage: Permill = Permill::from_percent(5);
 	pub BlockGasLimit: U256 = U256::from(u32::max_value());
 	pub PrecompilesValue: FrontierPrecompiles<Runtime> = FrontierPrecompiles::<_>::new();
 }
@@ -435,6 +437,8 @@ impl pallet_evm::Config for Runtime {
 	type BlockGasLimit = BlockGasLimit;
 	type OnChargeTransaction = ();
 	type FindAuthor = FindAuthorTruncated<Aura>;
+	type TxFeeDaoPercentage = TxFeeDaoPercentage;
+	type TxFeeDevPercentage = TxFeeDevPercentage;
 }
 
 impl pallet_ethereum::Config for Runtime {

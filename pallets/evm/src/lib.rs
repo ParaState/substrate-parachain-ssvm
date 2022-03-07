@@ -84,7 +84,7 @@ use serde::{Deserialize, Serialize};
 use sp_core::{Hasher, H160, H256, U256};
 use sp_runtime::{
 	traits::{BadOrigin, Saturating, UniqueSaturatedInto, Zero},
-	AccountId32,
+	AccountId32, Permill,
 };
 use sp_std::vec::Vec;
 
@@ -141,6 +141,12 @@ pub mod pallet {
 
 		/// Find author for the current block.
 		type FindAuthor: FindAuthor<H160>;
+
+		/// The escrow percentage of DAO when system charge tx-fee
+		type TxFeeDaoPercentage: Get<Permill>;
+
+		/// The escrow percentage of Develop when system charge tx-fee
+		type TxFeeDevPercentage: Get<Permill>;
 
 		/// EVM config used in the module.
 		fn config() -> &'static EvmConfig {
@@ -407,6 +413,14 @@ pub mod pallet {
 	#[pallet::getter(fn account_storages)]
 	pub type AccountStorages<T: Config> =
 		StorageDoubleMap<_, Blake2_128Concat, H160, Blake2_128Concat, H256, H256, ValueQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn escrow_account_of_dao)]
+	pub type EscrowAccountOfDao<T: Config> = StorageValue<_, T::AccountId>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn escrow_account_of_dvelop)]
+	pub type EscrowAccountOfDev<T: Config> = StorageValue<_, T::AccountId>;
 }
 
 /// Type alias for currency balance.
@@ -743,12 +757,18 @@ where
 				refund_imbalance
 			};
 
-			// merge the imbalance caused by paying the fees and refunding parts of it again.
-			let adjusted_paid = paid
-				.offset(refund_imbalance)
-				.same()
-				.unwrap_or_else(|_| C::NegativeImbalance::zero());
-			OU::on_unbalanced(adjusted_paid);
+			if let (Some(dao_address), Some(dev_address)) = (<EscrowAccountOfDao<T>>::get(), <EscrowAccountOfDev<T>>::get()) {
+				C::deposit_creating(&dao_address, T::TxFeeDaoPercentage::get().mul_floor(corrected_fee.low_u128()).unique_saturated_into());
+				C::deposit_creating(&dev_address, T::TxFeeDevPercentage::get().mul_floor(corrected_fee.low_u128()).unique_saturated_into());
+			}
+			else {
+				// merge the imbalance caused by paying the fees and refunding parts of it again.
+				let adjusted_paid = paid
+					.offset(refund_imbalance)
+					.same()
+					.unwrap_or_else(|_| C::NegativeImbalance::zero());
+				OU::on_unbalanced(adjusted_paid);
+			}
 		}
 	}
 
