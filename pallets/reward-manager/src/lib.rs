@@ -103,3 +103,13 @@ pub mod pallet {
 		}
 	}
 }
+
+impl<T> pallet_authorship::EventHandler<T::AccountId, T::BlockNumber> for Module<T>
+where
+	T: Config + pallet_authorship::Config + pallet_session::Config,
+{
+	fn note_author(author: T::AccountId) {
+		log::info!(target: "reward", "apply per block reward");
+	}
+	fn note_uncle(_author: T::AccountId, _age: T::BlockNumber) {}
+}
