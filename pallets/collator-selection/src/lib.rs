@@ -93,6 +93,7 @@ pub mod pallet {
 	};
 	use frame_system::{pallet_prelude::*, Config as SystemConfig};
 	use pallet_session::SessionManager;
+	use sp_core::H160;
 	use sp_runtime::traits::Convert;
 	use sp_staking::SessionIndex;
 
@@ -188,12 +189,29 @@ pub mod pallet {
 	pub type LastAuthoredBlock<T: Config> =
 		StorageMap<_, Twox64Concat, T::AccountId, T::BlockNumber, ValueQuery>;
 
+	/// Number of blocks authored by collator in this session.
+	#[pallet::storage]
+	#[pallet::getter(fn blocks_generated)]
+	pub type BlocksGenerated<T: Config> =
+		StorageMap<_, Twox64Concat, T::AccountId, u32, ValueQuery>;
+
 	/// Desired number of candidates.
 	///
 	/// This should ideally always be less than [`Config::MaxCandidates`] for weights to be correct.
 	#[pallet::storage]
 	#[pallet::getter(fn desired_candidates)]
 	pub type DesiredCandidates<T> = StorageValue<_, u32, ValueQuery>;
+
+	/// Threshold of blocks could be missed in this session.
+	#[pallet::storage]
+	#[pallet::getter(fn missing_blocks_threshold)]
+	pub type MissingBlocksThreshold<T> = StorageValue<_, u32, ValueQuery>;
+
+	/// Reward address in H160 format.
+	#[pallet::storage]
+	#[pallet::getter(fn reward_address)]
+	pub type RewardAddress<T: Config> =
+		StorageMap<_, Twox64Concat, T::AccountId, H160, ValueQuery>;
 
 	/// Fixed amount to deposit to become a collator.
 	///
@@ -202,11 +220,17 @@ pub mod pallet {
 	#[pallet::getter(fn candidacy_bond)]
 	pub type CandidacyBond<T> = StorageValue<_, BalanceOf<T>, ValueQuery>;
 
+	/// The collator blacklist, who was banned from being a collator.
+	#[pallet::storage]
+	#[pallet::getter(fn blacklist)]
+	pub type Blacklist<T: Config> = StorageValue<_, Vec<T::AccountId>, ValueQuery>;
+
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
 		pub invulnerables: Vec<T::AccountId>,
 		pub candidacy_bond: BalanceOf<T>,
 		pub desired_candidates: u32,
+		pub missing_blocks_threshold: u32,
 	}
 
 	#[cfg(feature = "std")]
@@ -216,6 +240,7 @@ pub mod pallet {
 				invulnerables: Default::default(),
 				candidacy_bond: Default::default(),
 				desired_candidates: Default::default(),
+				missing_blocks_threshold: Default::default(),
 			}
 		}
 	}
@@ -240,6 +265,7 @@ pub mod pallet {
 			);
 
 			<DesiredCandidates<T>>::put(&self.desired_candidates);
+			<MissingBlocksThreshold<T>>::put(&self.missing_blocks_threshold);
 			<CandidacyBond<T>>::put(&self.candidacy_bond);
 			<Invulnerables<T>>::put(&self.invulnerables);
 		}
@@ -249,10 +275,13 @@ pub mod pallet {
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		NewInvulnerables(Vec<T::AccountId>),
+		NewBlacklist(Vec<T::AccountId>),
 		NewDesiredCandidates(u32),
+		NewMissingBlocksThreshold(u32),
 		NewCandidacyBond(BalanceOf<T>),
 		CandidateAdded(T::AccountId, BalanceOf<T>),
 		CandidateRemoved(T::AccountId),
+		SetRewardAddress(T::AccountId, H160),
 	}
 
 	// Errors inform users that something went wrong.
@@ -276,6 +305,8 @@ pub mod pallet {
 		NoAssociatedValidatorId,
 		/// Validator ID is not yet registered
 		ValidatorNotRegistered,
+		/// User is in blacklist
+		InBlacklist,
 	}
 
 	#[pallet::hooks]
@@ -301,6 +332,18 @@ pub mod pallet {
 			Ok(().into())
 		}
 
+		/// Set the blacklist of collators.
+		#[pallet::weight(0)]
+		pub fn set_blacklist(
+			origin: OriginFor<T>,
+			new: Vec<T::AccountId>,
+		) -> DispatchResultWithPostInfo {
+			T::UpdateOrigin::ensure_origin(origin)?;
+			<Blacklist<T>>::put(&new);
+			Self::deposit_event(Event::NewBlacklist(new));
+			Ok(().into())
+		}
+
 		/// Set the ideal number of collators (not including the invulnerables).
 		/// If lowering this number, then the number of running collators could be higher than this figure.
 		/// Aside from that edge case, there should be no other way to have more collators than the desired number.
@@ -316,6 +359,18 @@ pub mod pallet {
 			}
 			<DesiredCandidates<T>>::put(&max);
 			Self::deposit_event(Event::NewDesiredCandidates(max));
+			Ok(().into())
+		}
+
+		/// Set the missing blocks threshold.
+		#[pallet::weight(T::WeightInfo::set_desired_candidates())]
+		pub fn set_missing_blocks_threshold(
+			origin: OriginFor<T>,
+			threshold: u32,
+		) -> DispatchResultWithPostInfo {
+			T::UpdateOrigin::ensure_origin(origin)?;
+			<MissingBlocksThreshold<T>>::put(&threshold);
+			Self::deposit_event(Event::NewMissingBlocksThreshold(threshold));
 			Ok(().into())
 		}
 
@@ -336,13 +391,14 @@ pub mod pallet {
 		///
 		/// This call is not available to `Invulnerable` collators.
 		#[pallet::weight(T::WeightInfo::register_as_candidate(T::MaxCandidates::get()))]
-		pub fn register_as_candidate(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
+		pub fn register_as_candidate(origin: OriginFor<T>, reward_address: H160) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
 			// ensure we are below limit.
 			let length = <Candidates<T>>::decode_len().unwrap_or_default();
 			ensure!((length as u32) < Self::desired_candidates(), Error::<T>::TooManyCandidates);
 			ensure!(!Self::invulnerables().contains(&who), Error::<T>::AlreadyInvulnerable);
+			ensure!(!Self::blacklist().contains(&who), Error::<T>::InBlacklist);
 
 			let validator_key = T::ValidatorIdOf::convert(who.clone())
 				.ok_or(Error::<T>::NoAssociatedValidatorId)?;
@@ -370,7 +426,10 @@ pub mod pallet {
 					}
 				})?;
 
-			Self::deposit_event(Event::CandidateAdded(who, deposit));
+			<RewardAddress<T>>::insert(who.clone(), reward_address);
+			Self::deposit_event(Event::CandidateAdded(who.clone(), deposit));
+			Self::deposit_event(Event::SetRewardAddress(who.clone(), reward_address));
+
 			Ok(Some(T::WeightInfo::register_as_candidate(current_count as u32)).into())
 		}
 
@@ -467,7 +526,8 @@ pub mod pallet {
 			// `reward` is half of pot account minus ED, this should never fail.
 			let _success = T::Currency::transfer(&pot, &author, reward, KeepAlive);
 			debug_assert!(_success.is_ok());
-			<LastAuthoredBlock<T>>::insert(author, frame_system::Pallet::<T>::block_number());
+			<LastAuthoredBlock<T>>::insert(&author, frame_system::Pallet::<T>::block_number());
+			<BlocksGenerated<T>>::insert(&author, <BlocksGenerated<T>>::get(&author) + 1);
 
 			frame_system::Pallet::<T>::register_extra_weight_unchecked(
 				T::WeightInfo::note_author(),
@@ -493,6 +553,12 @@ pub mod pallet {
 			let candidates_len_before = candidates.len();
 			let active_candidates = Self::kick_stale_candidates(candidates);
 			let active_candidates_len = active_candidates.len();
+
+			// reset blocks counter by each candidate.
+			for candidate in &active_candidates {
+				<BlocksGenerated<T>>::insert(candidate.clone(), 0);
+			}
+
 			let result = Self::assemble_collators(active_candidates);
 			let removed = candidates_len_before - active_candidates_len;
 
