@@ -590,6 +590,7 @@ impl pallet_collator_selection::Config for Runtime {
 	type ValidatorIdOf = pallet_collator_selection::IdentityCollator;
 	type ValidatorRegistration = Session;
 	type WeightInfo = ();
+	type SessionLength = SessionLength;
 }
 
 /// Configure the pallet template in pallets/template.
