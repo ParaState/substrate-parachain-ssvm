@@ -156,6 +156,9 @@ pub mod pallet {
 
 		/// The weight information of this pallet.
 		type WeightInfo: WeightInfo;
+
+		/// Number of blocks in a session.
+		type SessionLength: Get<Self::BlockNumber>;
 	}
 
 	/// Basic information about a collation candidate.
@@ -224,6 +227,17 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn blacklist)]
 	pub type Blacklist<T: Config> = StorageValue<_, Vec<T::AccountId>, ValueQuery>;
+
+	/// How many times a collator was kicked.
+	#[pallet::storage]
+	#[pallet::getter(fn kicked_times)]
+	pub type KickedTimes<T: Config> = StorageMap<_, Twox64Concat, T::AccountId, u32, ValueQuery>;
+
+	/// Last block authored by collator.
+	#[pallet::storage]
+	#[pallet::getter(fn candidate_register_block)]
+	pub type CandidateRegisterBlock<T: Config> =
+		StorageMap<_, Twox64Concat, T::AccountId, T::BlockNumber, ValueQuery>;
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
@@ -427,6 +441,7 @@ pub mod pallet {
 				})?;
 
 			<RewardAddress<T>>::insert(who.clone(), reward_address);
+			<CandidateRegisterBlock<T>>::insert(who.clone(), frame_system::Pallet::<T>::block_number());
 			Self::deposit_event(Event::CandidateAdded(who.clone(), deposit));
 			Self::deposit_event(Event::SetRewardAddress(who.clone(), reward_address));
 
@@ -486,18 +501,29 @@ pub mod pallet {
 		pub fn kick_stale_candidates(
 			candidates: Vec<CandidateInfo<T::AccountId, BalanceOf<T>>>,
 		) -> Vec<T::AccountId> {
-			let now = frame_system::Pallet::<T>::block_number();
-			let kick_threshold = T::KickThreshold::get();
+			let current_block_number = frame_system::Pallet::<T>::block_number();
+			let missing_blocks_threshold = T::BlockNumber::from(Self::missing_blocks_threshold());
+			let session_length = T::SessionLength::get();
+			let collator_length = candidates.len() + Self::invulnerables().len();
+			let blocks_should_generated = session_length / T::BlockNumber::from(collator_length as u32);
 			let new_candidates = candidates
 				.into_iter()
 				.filter_map(|c| {
-					let last_block = <LastAuthoredBlock<T>>::get(c.who.clone());
-					let since_last = now.saturating_sub(last_block);
-					if since_last < kick_threshold ||
-						Self::candidates().len() as u32 <= T::MinCandidates::get()
+					let blocks_generated = T::BlockNumber::from(<BlocksGenerated<T>>::get(c.who.clone()));
+					let blocks_after_register = current_block_number - <CandidateRegisterBlock<T>>::get(c.who.clone());
+					// It takes 2 sessions to join validator set after collator registration.
+					if blocks_after_register <= T::SessionLength::get().saturating_mul(T::BlockNumber::from(2u32)) ||
+						blocks_generated >= blocks_should_generated - missing_blocks_threshold
 					{
 						Some(c.who)
 					} else {
+						let kicked_times = <KickedTimes<T>>::get(&c.who) + 1;
+						<KickedTimes<T>>::insert(&c.who, kicked_times);
+						// Insert into blacklist if kicked 3 times or more
+						if kicked_times >= 3 {
+							<Blacklist<T>>::append(c.who.clone());
+							Self::deposit_event(Event::NewBlacklist(<Blacklist<T>>::get()));
+						}
 						let outcome = Self::try_remove_candidate(&c.who);
 						if let Err(why) = outcome {
 							log::warn!("Failed to remove candidate {:?}", why);
