@@ -28,6 +28,9 @@ pub mod pallet {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 		/// Polkadot account to H160 address.
 		type EthAddressMapping: EthAddressMapping<Self::AccountId>;
+		/// Initial total supply
+		#[pallet::constant]
+		type InitialSupply: Get<u128>;
 	}
 
 	#[pallet::pallet]
