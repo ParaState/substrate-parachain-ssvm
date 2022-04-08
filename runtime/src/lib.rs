@@ -607,6 +607,7 @@ impl pallet_collator_selection::Config for Runtime {
 /// Configure the pallet template in pallets/template.
 impl pallet_reward_manager::Config for Runtime {
 	type Event = Event;
+	type EthAddressMapping = pallet_collator_selection::CollatorEthAddressMapping<Self>;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.

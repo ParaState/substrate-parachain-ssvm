@@ -4,6 +4,7 @@
 /// Learn more about FRAME and the core library of Substrate FRAME pallets:
 /// <https://docs.substrate.io/v3/runtime/frame>
 pub use pallet::*;
+use pallet_collator_selection::EthAddressMapping;
 
 #[cfg(test)]
 mod mock;
@@ -16,6 +17,7 @@ mod benchmarking;
 
 #[frame_support::pallet]
 pub mod pallet {
+	use super::*;
 	use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*};
 	use frame_system::pallet_prelude::*;
 
@@ -24,6 +26,8 @@ pub mod pallet {
 	pub trait Config: frame_system::Config {
 		/// Because this pallet emits events, it depends on the runtime's definition of an event.
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+		/// Polkadot account to H160 address.
+		type EthAddressMapping: EthAddressMapping<Self::AccountId>;
 	}
 
 	#[pallet::pallet]
@@ -104,7 +108,7 @@ pub mod pallet {
 	}
 }
 
-impl<T> pallet_authorship::EventHandler<T::AccountId, T::BlockNumber> for Module<T>
+impl<T> pallet_authorship::EventHandler<T::AccountId, T::BlockNumber> for Pallet<T>
 where
 	T: Config + pallet_authorship::Config + pallet_session::Config,
 {
