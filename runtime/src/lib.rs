@@ -58,7 +58,7 @@ use xcm_builder::{
 use xcm_executor::{Config, XcmExecutor};
 
 /// Import the template pallet.
-pub use pallet_reward_manager;
+use pallet_reward_manager;
 
 /// Alias to 512-bit hash when used in the context of a transaction signature on the chain.
 pub type Signature = MultiSignature;
@@ -624,6 +624,8 @@ parameter_types! {
 impl pallet_reward_manager::Config for Runtime {
 	type Event = Event;
 	type EthAddressMapping = pallet_collator_selection::CollatorEthAddressMapping<Self>;
+	type AccountMapping = pallet_reward_manager::HashedAddressMapping<BlakeTwo256>;
+	type Currency = Balances;
 	type InitialSupply = InitialSupply;
 }
 
