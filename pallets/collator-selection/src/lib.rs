@@ -61,6 +61,8 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 pub use pallet::*;
+use sp_core::H160;
+use sp_std::marker::PhantomData;
 
 #[cfg(test)]
 mod mock;
@@ -74,6 +76,7 @@ pub mod weights;
 
 #[frame_support::pallet]
 pub mod pallet {
+	use super::*;
 	pub use crate::weights::WeightInfo;
 	use core::ops::Div;
 	use frame_support::{
@@ -93,7 +96,6 @@ pub mod pallet {
 	};
 	use frame_system::{pallet_prelude::*, Config as SystemConfig};
 	use pallet_session::SessionManager;
-	use sp_core::H160;
 	use sp_runtime::traits::Convert;
 	use sp_staking::SessionIndex;
 
@@ -213,8 +215,7 @@ pub mod pallet {
 	/// Reward address in H160 format.
 	#[pallet::storage]
 	#[pallet::getter(fn reward_address)]
-	pub type RewardAddress<T: Config> =
-		StorageMap<_, Twox64Concat, T::AccountId, H160, ValueQuery>;
+	pub type RewardAddress<T: Config> = StorageMap<_, Twox64Concat, T::AccountId, H160, ValueQuery>;
 
 	/// Fixed amount to deposit to become a collator.
 	///
@@ -405,7 +406,10 @@ pub mod pallet {
 		///
 		/// This call is not available to `Invulnerable` collators.
 		#[pallet::weight(T::WeightInfo::register_as_candidate(T::MaxCandidates::get()))]
-		pub fn register_as_candidate(origin: OriginFor<T>, reward_address: H160) -> DispatchResultWithPostInfo {
+		pub fn register_as_candidate(
+			origin: OriginFor<T>,
+			reward_address: H160,
+		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
 			// ensure we are below limit.
@@ -441,7 +445,10 @@ pub mod pallet {
 				})?;
 
 			<RewardAddress<T>>::insert(who.clone(), reward_address);
-			<CandidateRegisterBlock<T>>::insert(who.clone(), frame_system::Pallet::<T>::block_number());
+			<CandidateRegisterBlock<T>>::insert(
+				who.clone(),
+				frame_system::Pallet::<T>::block_number(),
+			);
 			Self::deposit_event(Event::CandidateAdded(who.clone(), deposit));
 			Self::deposit_event(Event::SetRewardAddress(who.clone(), reward_address));
 
@@ -505,14 +512,18 @@ pub mod pallet {
 			let missing_blocks_threshold = T::BlockNumber::from(Self::missing_blocks_threshold());
 			let session_length = T::SessionLength::get();
 			let collator_length = candidates.len() + Self::invulnerables().len();
-			let blocks_should_generated = session_length / T::BlockNumber::from(collator_length as u32);
+			let blocks_should_generated =
+				session_length / T::BlockNumber::from(collator_length as u32);
 			let new_candidates = candidates
 				.into_iter()
 				.filter_map(|c| {
-					let blocks_generated = T::BlockNumber::from(<BlocksGenerated<T>>::get(c.who.clone()));
-					let blocks_after_register = current_block_number - <CandidateRegisterBlock<T>>::get(c.who.clone());
+					let blocks_generated =
+						T::BlockNumber::from(<BlocksGenerated<T>>::get(c.who.clone()));
+					let blocks_after_register =
+						current_block_number - <CandidateRegisterBlock<T>>::get(c.who.clone());
 					// It takes 2 sessions to join validator set after collator registration.
-					if blocks_after_register <= T::SessionLength::get().saturating_mul(T::BlockNumber::from(2u32)) ||
+					if blocks_after_register <=
+						T::SessionLength::get().saturating_mul(T::BlockNumber::from(2u32)) ||
 						blocks_generated >= blocks_should_generated - missing_blocks_threshold
 					{
 						Some(c.who)
@@ -600,5 +611,27 @@ pub mod pallet {
 		fn end_session(_: SessionIndex) {
 			// we don't care.
 		}
+	}
+}
+
+pub enum AccountError {
+	/// Account not exist error.
+	NotExist,
+}
+
+/// Trait that outputs the current account's binding eth address.
+pub trait EthAddressMapping<AccountId> {
+	/// Return the binding eth address.
+	fn eth_address(account: AccountId) -> Result<H160, AccountError>;
+}
+
+/// Returns the collator's reward eth address.
+pub struct CollatorEthAddressMapping<T>(PhantomData<T>);
+impl<T: Config> EthAddressMapping<T::AccountId> for CollatorEthAddressMapping<T> {
+	fn eth_address(account: <T>::AccountId) -> Result<H160, AccountError> {
+		if <RewardAddress<T>>::contains_key(&account) {
+			return Ok(<RewardAddress<T>>::get(account))
+		}
+		return Err(AccountError::NotExist)
 	}
 }
