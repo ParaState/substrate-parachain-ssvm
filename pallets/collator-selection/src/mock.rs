@@ -219,6 +219,7 @@ impl Config for Test {
 	type ValidatorIdOf = IdentityCollator;
 	type ValidatorRegistration = IsRegistered;
 	type WeightInfo = ();
+	type SessionLength = Period;
 }
 
 pub fn new_test_ext() -> sp_io::TestExternalities {
@@ -235,6 +236,7 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 		desired_candidates: 2,
 		candidacy_bond: 10,
 		invulnerables,
+		missing_blocks_threshold: 0,
 	};
 	let session = pallet_session::GenesisConfig::<Test> { keys };
 	pallet_balances::GenesisConfig::<Test> { balances }
