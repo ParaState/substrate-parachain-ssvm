@@ -5123,6 +5123,7 @@ dependencies = [
  "frame-system",
  "log",
  "pallet-authorship",
+ "pallet-balances",
  "pallet-collator-selection",
  "pallet-session",
  "parity-scale-codec",

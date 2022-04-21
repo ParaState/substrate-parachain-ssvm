@@ -30,6 +30,7 @@ log = { version = "0.4.14", default-features = false }
 
 [dev-dependencies]
 sp-io = { git = "https://github.com/paritytech/substrate", default-features = false , branch = "polkadot-v0.9.16" }
+pallet-balances = { git = "https://github.com/paritytech/substrate", default-features = false , branch = "polkadot-v0.9.16" }
 
 [features]
 default = ["std"]
@@ -42,6 +43,7 @@ std = [
 	"frame-system/std",
 	"frame-benchmarking/std",
 	"pallet-collator-selection/std",
+	"pallet-balances/std",
 	"log/std"
 ]
 try-runtime = [ "frame-support/try-runtime" ]
